@@ -29,11 +29,7 @@ const ChatMessage = ({ role, content, isThinking }: ChatMessageProps) => {
             {isUser ? "Você" : "Assistente"}
           </p>
           {isThinking && !content ? (
-            <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
-              <span className="inline-block w-1.5 h-1.5 bg-primary rounded-full animate-pulse-glow" style={{ animationDelay: "0ms" }} />
-              <span className="inline-block w-1.5 h-1.5 bg-primary rounded-full animate-pulse-glow" style={{ animationDelay: "200ms" }} />
-              <span className="inline-block w-1.5 h-1.5 bg-primary rounded-full animate-pulse-glow" style={{ animationDelay: "400ms" }} />
-            </div>
+            <ThinkingIndicator />
           ) : (
             <div className="chat-prose text-sm">
               <ReactMarkdown>{content}</ReactMarkdown>
