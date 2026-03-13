@@ -1,5 +1,6 @@
 import ReactMarkdown from "react-markdown";
 import ChatLogo from "./ChatLogo";
+import ThinkingIndicator from "./ThinkingIndicator";
 import { User } from "lucide-react";
 
 interface ChatMessageProps {
