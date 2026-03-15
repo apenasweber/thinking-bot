@@ -2,6 +2,25 @@ export type Msg = { role: "user" | "assistant"; content: string };
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
+// Helper function to process SSE data lines and extract content
+function processSSELine(line: string, onDelta: (content: string) => void): boolean {
+  if (line.endsWith("\r")) line = line.slice(0, -1);
+  if (line.startsWith(":") || line.trim() === "") return false;
+  if (!line.startsWith("data: ")) return false;
+
+  const jsonStr = line.slice(6).trim();
+  if (jsonStr === "[DONE]") return true; // Signal stream is done
+
+  try {
+    const parsed = JSON.parse(jsonStr);
+    const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+    if (content) onDelta(content);
+    return false;
+  } catch {
+    return false; // Parsing failed, continue processing
+  }
+}
+
 export async function streamChat({
   messages,
   onDelta,
@@ -42,37 +61,15 @@ export async function streamChat({
       let line = textBuffer.slice(0, newlineIndex);
       textBuffer = textBuffer.slice(newlineIndex + 1);
 
-      if (line.endsWith("\r")) line = line.slice(0, -1);
-      if (line.startsWith(":") || line.trim() === "") continue;
-      if (!line.startsWith("data: ")) continue;
-
-      const jsonStr = line.slice(6).trim();
-      if (jsonStr === "[DONE]") { streamDone = true; break; }
-
-      try {
-        const parsed = JSON.parse(jsonStr);
-        const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-        if (content) onDelta(content);
-      } catch {
-        textBuffer = line + "\n" + textBuffer;
-        break;
-      }
+      const isDone = processSSELine(line, onDelta);
+      if (isDone) { streamDone = true; break; }
     }
   }
 
   if (textBuffer.trim()) {
     for (let raw of textBuffer.split("\n")) {
       if (!raw) continue;
-      if (raw.endsWith("\r")) raw = raw.slice(0, -1);
-      if (raw.startsWith(":") || raw.trim() === "") continue;
-      if (!raw.startsWith("data: ")) continue;
-      const jsonStr = raw.slice(6).trim();
-      if (jsonStr === "[DONE]") continue;
-      try {
-        const parsed = JSON.parse(jsonStr);
-        const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-        if (content) onDelta(content);
-      } catch { /* ignore */ }
+      processSSELine(raw, onDelta);
     }
   }
 

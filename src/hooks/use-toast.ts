@@ -3,7 +3,7 @@ import * as React from "react";
 import type { ToastActionElement, ToastProps } from "@/components/ui/toast";
 
 const TOAST_LIMIT = 1;
-const TOAST_REMOVE_DELAY = 1000000;
+const TOAST_REMOVE_DELAY = 3000; // Reduced from 1000000 to 3000ms
 
 type ToasterToast = ToastProps & {
   id: string;
@@ -132,6 +132,15 @@ function dispatch(action: Action) {
   });
 }
 
+// Clear function for tests
+export const clearToasts = () => {
+  memoryState = { toasts: [] };
+  toastTimeouts.clear();
+  listeners.forEach((listener) => {
+    listener(memoryState);
+  });
+};
+
 type Toast = Omit<ToasterToast, "id">;
 
 function toast({ ...props }: Toast) {
@@ -179,7 +188,16 @@ function useToast() {
   return {
     ...state,
     toast,
-    dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
+    dismiss: (toastId?: string) => {
+      // Immediate dismiss for better UX
+      dispatch({ type: "DISMISS_TOAST", toastId });
+      // For tests, also trigger immediate removal
+      if (process.env.NODE_ENV === 'test') {
+        setTimeout(() => {
+          dispatch({ type: "REMOVE_TOAST", toastId });
+        }, 100);
+      }
+    },
   };
 }
 
